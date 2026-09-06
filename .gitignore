@@ -1,0 +1,23 @@
+# Power BI
+*.pbix
+*.pbit
+~$*
+
+# Python
+__pycache__/
+*.py[cod]
+.ipynb_checkpoints/
+.venv/
+venv/
+
+# Data — lives in 02-Datasets, never committed (too large, and regenerable)
+*.csv
+*.xlsx
+*.xls
+!analysis/*.csv
+
+# Local / OS
+.DS_Store
+Thumbs.db
+*.log
+scratch/
