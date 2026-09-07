@@ -20,6 +20,8 @@
 
 BEGIN;
 
+\connect ecommerce;
+
 DROP TABLE IF EXISTS staging.orders, staging.returns, staging.targets;
 
 -- T1. staging.orders - 21 columns, all text, in CSV header order.
@@ -27,27 +29,55 @@ DROP TABLE IF EXISTS staging.orders, staging.returns, staging.targets;
 --     Customer Name, Segment, Country/Region, City, State, Postal Code, Region,
 --     Product ID, Category, Sub-Category, Product Name, Sales, Quantity,
 --     Discount, Profit
--- TODO
+-- 
+    Create table staging.orders (
+        row_id text,
+        order_id text,
+        order_date text,
+        ship_date text,
+        ship_mode text,
+        customer_id text,
+        customer_name text,
+        segment text,
+        country_region text,
+        city text,
+        state text,
+        postal_code text,
+        region text,
+        product_id text,
+        category text,
+        sub_category text,
+        product_name text,
+        sales text,
+        quantity text,
+        discount text,
+        profit text
+    );
 
 
 -- T2. staging.returns - 2 columns.
--- TODO
+    create table staging.returns(
+        return_status text,
+        order_id text
+    );
 
 
 -- T3. staging.targets - 5 columns. Open the file in a text editor first; the
 --     header is not as clean as you would like, and that is the point.
 -- TODO
-
+        create table staging.targets(
+            region text,
+            year text,
+            revenue_target  text,
+            units text,
+            owner text
+        );
 
 COMMIT;
 
 -- Load (run these from inside psql, adjusting paths if your checkout differs):
--- \copy staging.orders  FROM 'C:/Users/coral/Documents/PBI Dashboads/02-Datasets/Raw/ecommerce-scaled/orders.csv'  WITH (FORMAT csv, HEADER true, ENCODING 'UTF8')
--- \copy staging.returns FROM 'C:/Users/coral/Documents/PBI Dashboads/02-Datasets/Raw/ecommerce-scaled/returns.csv' WITH (FORMAT csv, HEADER true, ENCODING 'UTF8')
--- \copy staging.targets FROM 'C:/Users/coral/Documents/PBI Dashboads/02-Datasets/Raw/ecommerce-scaled/targets.csv' WITH (FORMAT csv, HEADER true, ENCODING 'UTF8')
+\copy staging.orders  FROM 'C:/Users/coral/Documents/PBI Dashboads/02-Datasets/Raw/ecommerce-scaled/orders.csv'  WITH (FORMAT csv, HEADER true, ENCODING 'UTF8')
+\copy staging.returns FROM 'C:/Users/coral/Documents/PBI Dashboads/02-Datasets/Raw/ecommerce-scaled/returns.csv' WITH (FORMAT csv, HEADER true, ENCODING 'UTF8')
+\copy staging.targets FROM 'C:/Users/coral/Documents/PBI Dashboads/02-Datasets/Raw/ecommerce-scaled/targets.csv' WITH (FORMAT csv, HEADER true, ENCODING 'UTF8')
 
--- =============================================================================
--- CHECK - row counts. Compare against `wc -l` on each file, minus the header.
--- =============================================================================
 
--- TODO
