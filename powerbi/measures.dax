@@ -1,0 +1,431 @@
+// =============================================================================
+// measures.dax — the complete measure layer, 42 measures
+// =============================================================================
+// Paste into Power BI Desktop. Every measure lives on a disconnected table
+// called _Measures (Home ▸ Enter data ▸ one dummy column ▸ delete the column
+// after the first measure lands on it), organised by the display folders
+// named in the comments.
+//
+// CONVENTIONS USED THROUGHOUT, and why
+// -----------------------------------------------------------------------------
+//  * DIVIDE(), never "/". DIVIDE returns BLANK on a zero denominator instead of
+//    an infinity error, and a blank cell is the correct thing to show for
+//    "margin of a category with no sales in this slice".
+//  * Ratios are always a ratio of sums: DIVIDE([Profit], [Revenue]).
+//    Never AVERAGEX(rows, profit/sales) — that weights a $2 line the same as a
+//    $20,000 one and produces a number nobody can reconcile.
+//  * Measures are built ON other measures, not on repeated SUM()s. Change the
+//    definition of Revenue once and 30 measures follow.
+//  * Time intelligence needs dim_date marked as a date table (Table tools ▸
+//    Mark as date table ▸ date_key). Without it SAMEPERIODLASTYEAR silently
+//    returns wrong results rather than erroring.
+//  * VAR is used wherever a value is referenced twice — it evaluates once, and
+//    it makes the filter context of each piece explicit.
+//
+// Every measure marked  ✅ SQL:  was checked against the query named, at the
+// Day 3 gate. See powerbi/dax-vs-sql-gate.md for the results.
+// =============================================================================
+
+
+// =============================================================================
+// FOLDER: 01 Base
+// =============================================================================
+
+Revenue =
+SUM ( fact_order_line[sales] )
+// ✅ SQL: 10_ SP-06 → 218,617,012.65
+// The line value AFTER discount and BEFORE returns. Gross of returns on
+// purpose, so it reconciles to source exactly; the net version is explicit
+// and lives in folder 06.
+
+Profit =
+SUM ( fact_order_line[profit] )
+// ✅ SQL: 10_ SP-06 → 47,254,458.39
+
+Units =
+SUM ( fact_order_line[quantity] )
+// ✅ SQL: 10_ SP-06 → 3,338,886
+
+Order Lines =
+COUNTROWS ( fact_order_line )
+// ✅ SQL: 10_ SP-06 → 996,567
+
+Orders =
+DISTINCTCOUNT ( fact_order_line[order_id] )
+// ✅ SQL: 10_ SP-06 → 337,737
+// order_id is a degenerate dimension living on the fact. DISTINCTCOUNT, not
+// COUNTROWS: the table is at LINE grain and an order averages 2.95 lines.
+
+Customers =
+DISTINCTCOUNT ( fact_order_line[customer_key] )
+// ✅ SQL: 10_ SP-06 → 107,688
+// Counted from the FACT, not from dim_customer. COUNTROWS(dim_customer) would
+// return every customer who ever existed regardless of the date slicer —
+// which is a different (and usually unwanted) question.
+
+Discount Value =
+SUM ( fact_order_line[discount_value] )
+// ✅ SQL: 11_ DP-01 → 30,309,470.42 across all years
+
+Gross List Value =
+SUM ( fact_order_line[gross_list_value] )
+
+
+// =============================================================================
+// FOLDER: 02 Ratios
+// =============================================================================
+
+Margin % =
+DIVIDE ( [Profit], [Revenue] )
+// ✅ SQL: 10_ SP-06 → 21.62%
+// Format: percentage, 2 dp.
+
+AOV =
+DIVIDE ( [Revenue], [Orders] )
+// ✅ SQL: 10_ SP-08 → 647.30
+// AVERAGE(fact_order_line[sales]) would give 219.37 — the average LINE value,
+// which is a different number and the most common error on this dataset.
+
+Avg Lines per Order =
+DIVIDE ( [Order Lines], [Orders] )
+// ✅ SQL: 10_ SP-08 → 2.95
+
+Revenue per Customer =
+DIVIDE ( [Revenue], [Customers] )
+// ✅ SQL: 12_ CA-05 → 2,030.10
+
+Avg Order Profit =
+DIVIDE ( [Profit], [Orders] )
+
+Discount % (weighted) =
+DIVIDE ( [Discount Value], [Gross List Value] )
+// ✅ SQL: 11_ DP-01 → 2021: 14.89%
+// The rate Finance means: money given away over money that could have been
+// charged. Weights a $3,000 copier above a $3 pencil, which is correct.
+
+Discount % (unweighted) =
+AVERAGE ( fact_order_line[discount] )
+// ✅ SQL: 11_ DP-01 → 2021: 13.05%
+// The average LINE's discount rate. Kept deliberately alongside the weighted
+// version because the two differ by ~1.8 points in 2021, and being able to
+// say which one a number is, is the point.
+
+
+// =============================================================================
+// FOLDER: 03 Time intelligence
+// =============================================================================
+
+Revenue LY =
+CALCULATE ( [Revenue], SAMEPERIODLASTYEAR ( dim_date[date_key] ) )
+// ✅ SQL: 10_ SP-01, LAG(12) over the monthly series.
+// Requires dim_date marked as a date table AND contiguous — 04_dim_date.sql
+// builds it from generate_series for exactly this reason.
+
+Profit LY =
+CALCULATE ( [Profit], SAMEPERIODLASTYEAR ( dim_date[date_key] ) )
+
+Revenue YoY =
+[Revenue] - [Revenue LY]
+
+Revenue YoY % =
+DIVIDE ( [Revenue] - [Revenue LY], [Revenue LY] )
+// ✅ SQL: 10_ SP-01 → 2021 full year: +11.8%
+
+Profit YoY % =
+DIVIDE ( [Profit] - [Profit LY], [Profit LY] )
+// ✅ SQL: 10_ SP-02 → 2021: -1.3%   ← the headline of the whole project
+
+Margin % LY =
+CALCULATE ( [Margin %], SAMEPERIODLASTYEAR ( dim_date[date_key] ) )
+
+Margin Change (pp) =
+( [Margin %] - [Margin % LY] ) * 100
+// ✅ SQL: 10_ SP-02 → 2021: -2.49 pp
+// Percentage POINTS, not percent. Margin moving 4% → 2% is "-2 pp" and also
+// "-50%"; only the first is unambiguous, and mislabelling it is how a modest
+// move gets presented as a catastrophe.
+
+Revenue YTD =
+TOTALYTD ( [Revenue], dim_date[date_key] )
+
+Revenue Rolling 12M =
+CALCULATE (
+    [Revenue],
+    DATESINPERIOD ( dim_date[date_key], MAX ( dim_date[date_key] ), -12, MONTH )
+)
+// Smooths the seasonality found in SP-07 (Dec runs 35% above a typical month)
+// so a trend line shows trend rather than Christmas.
+
+Revenue 3M Moving Avg =
+AVERAGEX (
+    DATESINPERIOD ( dim_date[date_key], MAX ( dim_date[date_key] ), -3, MONTH ),
+    CALCULATE ( [Revenue] )
+)
+
+Seasonality Index =
+// Average of this calendar month across all years, indexed to the average
+// month. ALLEXCEPT keeps the month, drops the year — which is the whole trick.
+// ✅ SQL: 10_ SP-07 → Dec 135.5, Jan 64.3
+VAR MonthAvg =
+    CALCULATE (
+        AVERAGEX ( VALUES ( dim_date[year] ), [Revenue] ),
+        ALLEXCEPT ( dim_date, dim_date[month_no], dim_date[month_name] )
+    )
+VAR OverallAvg =
+    CALCULATE (
+        AVERAGEX ( VALUES ( dim_date[year_month] ), [Revenue] ),
+        REMOVEFILTERS ( dim_date )
+    )
+RETURN
+    DIVIDE ( MonthAvg, OverallAvg ) * 100
+
+
+// =============================================================================
+// FOLDER: 04 Filter modifiers  (share, rank, Pareto)
+// =============================================================================
+
+% of Total Revenue =
+DIVIDE (
+    [Revenue],
+    CALCULATE ( [Revenue], REMOVEFILTERS ( dim_product ) )
+)
+// REMOVEFILTERS on the dimension, not ALL() on the fact table. ALL(fact) would
+// also strip the date slicer, so every share would be measured against all
+// four years no matter what the user selected. This is the single most common
+// "why don't my percentages add to 100" bug.
+
+% of Total Profit =
+DIVIDE ( [Profit], CALCULATE ( [Profit], REMOVEFILTERS ( dim_product ) ) )
+
+Revenue Rank =
+RANKX ( ALLSELECTED ( dim_product[product_name] ), [Revenue],, DESC, DENSE )
+// ALLSELECTED, not ALL: the rank respects the user's slicers (rank within the
+// selected category) but ignores the row context of the visual itself.
+
+Cumulative Revenue % =
+// The Pareto curve. ✅ SQL: 11_ PP-08 → 468 of 1,862 products (25.1%) = 80%.
+VAR CurrentRev = [Revenue]
+VAR AllProducts = ALLSELECTED ( dim_product[product_name] )
+VAR RunningTotal =
+    SUMX ( FILTER ( AllProducts, [Revenue] >= CurrentRev ), [Revenue] )
+VAR GrandTotal = CALCULATE ( [Revenue], AllProducts )
+RETURN
+    DIVIDE ( RunningTotal, GrandTotal )
+
+Revenue (All Regions) =
+CALCULATE ( [Revenue], REMOVEFILTERS ( dim_geography ) )
+
+Margin % vs Company =
+( [Margin %] - CALCULATE ( [Margin %], REMOVEFILTERS ( dim_product, dim_geography ) ) ) * 100
+// Percentage points above or below the company blended margin, for the
+// conditional formatting on the Page 2 matrix.
+
+
+// =============================================================================
+// FOLDER: 05 Discount & margin recovery   ← the headline page after the CR
+// =============================================================================
+
+Revenue at 30%+ Discount =
+CALCULATE ( [Revenue], KEEPFILTERS ( fact_order_line[discount] >= 0.30 ) )
+// ✅ SQL: 11_ DP-03 → 20,369,519.43 all years
+
+Profit at 30%+ Discount =
+CALCULATE ( [Profit], KEEPFILTERS ( fact_order_line[discount] >= 0.30 ) )
+// ✅ SQL: 11_ DP-03 → -3,363,287.99 all years
+// KEEPFILTERS so that clicking a discount band in a slicer INTERSECTS with
+// this condition rather than replacing it. Without KEEPFILTERS, selecting the
+// "10-19%" band would still show the 30%+ number, which looks like a bug in
+// the visual and is actually a bug in the measure.
+
+Profit at 50%+ Discount =
+CALCULATE ( [Profit], KEEPFILTERS ( fact_order_line[discount] >= 0.50 ) )
+// ✅ SQL: 11_ DP-03 → -2,107,706.73 all years; -1,223,143.11 in 2021 alone.
+// This is the literal answer to Ritu's forwarded question.
+
+% Revenue Deeply Discounted =
+DIVIDE ( [Revenue at 30%+ Discount], [Revenue] )
+// ✅ SQL: 11_ DP-01 → 2021: 9.3% at 30%+, 3.3% at 50%+
+
+// --- What-if parameter --------------------------------------------------
+// Modeling ▸ New parameter ▸ Numeric range: Min 0.05, Max 0.60, Increment 0.05,
+// Default 0.30. Power BI generates the table and the SELECTEDVALUE measure;
+// both are reproduced here so this file is complete.
+
+Discount Cap = GENERATESERIES ( 0.05, 0.60, 0.05 )      // calculated TABLE
+
+Discount Cap Value =
+SELECTEDVALUE ( 'Discount Cap'[Discount Cap], 0.30 )
+
+Margin Recovery (Upper) =
+// Every affected order survives the cap, repriced at the cap.
+// Profit gain per line = revenue gain, because cost does not move with the
+// discount. See 16_discount_counterfactual.sql for the derivation.
+// ✅ SQL: 16_ !2 → 2021 at a 30% cap: +3,491,277.01
+VAR Cap = [Discount Cap Value]
+RETURN
+    SUMX (
+        FILTER ( fact_order_line, fact_order_line[discount] > Cap ),
+        fact_order_line[gross_list_value] * ( 1 - Cap ) - fact_order_line[sales]
+    )
+
+Margin Recovery (Lower) =
+// Every ORDER containing a line above the cap is lost entirely — taking its
+// full-price lines with it. The strict bound, and the one people forget.
+// ✅ SQL: 16_ !2 → 2021 at a 30% cap: -3,305,761.75
+VAR Cap = [Discount Cap Value]
+VAR AffectedOrders =
+    CALCULATETABLE (
+        VALUES ( fact_order_line[order_id] ),
+        KEEPFILTERS ( fact_order_line[discount] > Cap )
+    )
+RETURN
+    -1 * CALCULATE ( [Profit], AffectedOrders )
+
+Margin Recovery (at stated survival) =
+// The middle of the range, with the assumption on screen instead of hidden.
+// Pair with a second what-if parameter 'Survival Rate' = GENERATESERIES(0,1,0.05).
+VAR Survival = SELECTEDVALUE ( 'Survival Rate'[Survival Rate], 0.75 )
+RETURN
+    [Margin Recovery (Upper)] * Survival
+  + [Margin Recovery (Lower)] * ( 1 - Survival )
+
+Break-even Survival Rate =
+// Below this share of affected orders surviving, the cap destroys more than it
+// recovers. ✅ SQL: 16_ !2b → 48.6% at a flat 30% cap; 27.4% at the
+// per-sub-category cap. The single most useful number on Page 1.
+DIVIDE (
+    -[Margin Recovery (Lower)],
+    [Margin Recovery (Upper)] - [Margin Recovery (Lower)]
+)
+
+
+// =============================================================================
+// FOLDER: 06 Returns
+// =============================================================================
+
+Returned Orders =
+COUNTROWS ( fact_return )
+// ✅ SQL: 14_ RT-01 → 27,674
+// fact_return is ORDER grain, so COUNTROWS is right here and DISTINCTCOUNT
+// would be redundant. On fact_order_line it would be wrong. Same word,
+// different grain, different answer.
+
+Return Rate % =
+DIVIDE ( [Returned Orders], [Orders] )
+// ✅ SQL: 14_ RT-01 → 8.19%
+// Both numerator and denominator are at ORDER grain. Measuring the numerator
+// at line grain instead gives 8.96% and inflates every category rate by the
+// order's line count — the 3.23× fan-out that 07_reconciliation.sql G2
+// measures on purpose.
+
+Returned Revenue =
+CALCULATE ( [Revenue], KEEPFILTERS ( fact_order_line[is_returned] = TRUE ) )
+// ✅ SQL: 14_ RT-01 → 23,225,342.73
+
+Net Revenue =
+[Revenue] - [Returned Revenue]
+// ✅ SQL: 14_ RT-01 → 195,391,669.92
+
+Returned Profit =
+CALCULATE ( [Profit], KEEPFILTERS ( fact_order_line[is_returned] = TRUE ) )
+
+Net Profit =
+[Profit] - [Returned Profit]
+// ✅ SQL: 14_ RT-01 → 42,532,183.64
+
+Net Margin % =
+DIVIDE ( [Net Profit], [Net Revenue] )
+// ✅ SQL: 14_ RT-01 → 21.77%
+// Higher than the gross 21.62%, which is the finding: returned orders are
+// slightly LESS profitable than kept ones, so returns are not what is eating
+// the margin. Finance's stated hypothesis, tested and not supported.
+
+
+// =============================================================================
+// FOLDER: 07 Customer
+// =============================================================================
+
+Repeat Customers =
+// Customers with 2+ distinct ORDERS. Not 2+ lines: an order with three lines
+// is one purchase decision. Counting lines gives 94.0% instead of 72.4%.
+// ✅ SQL: 12_ CA-03a → 77,964
+COUNTROWS (
+    FILTER (
+        VALUES ( fact_order_line[customer_key] ),
+        CALCULATE ( DISTINCTCOUNT ( fact_order_line[order_id] ) ) >= 2
+    )
+)
+
+Repeat Rate % =
+DIVIDE ( [Repeat Customers], [Customers] )
+// ✅ SQL: 12_ CA-03a → 72.4%
+
+New Customers =
+// A customer whose FIRST EVER order falls inside the current filter context.
+// The ALL() inside the inner CALCULATE is what makes "first ever" mean first
+// ever, and not first-within-the-slicer.
+VAR CurrentDates = VALUES ( dim_date[date_key] )
+RETURN
+    COUNTROWS (
+        FILTER (
+            VALUES ( fact_order_line[customer_key] ),
+            VAR FirstOrder =
+                CALCULATE (
+                    MIN ( fact_order_line[date_key] ),
+                    REMOVEFILTERS ( dim_date )
+                )
+            RETURN FirstOrder IN CurrentDates
+        )
+    )
+// ✅ SQL: 12_ cohort-by-year → 2019: 38,683 · 2020: 30,751 · 2021: 12,301
+
+Orders per Customer =
+DIVIDE ( [Orders], [Customers] )
+// ✅ SQL: 12_ CA-05 → 2021: 1.86 (from 1.26 in 2018)
+
+
+// =============================================================================
+// FOLDER: 08 Targets
+// =============================================================================
+
+Revenue Target =
+SUM ( fact_target[revenue_target] )
+// ✅ SQL: 15_ TA-01
+
+Target Attainment % =
+DIVIDE ( [Revenue], [Revenue Target] )
+// ✅ SQL: 15_ TA-02 → 2021: East 107.7 · South 107.3 · Central 96.3 · West 93.7
+
+Target Variance =
+[Revenue] - [Revenue Target]
+
+Target Status =
+// Central 2018 has no target in the source and must not silently read as a
+// 100% miss. An explicit label is the honest treatment, and noticing that a
+// region-year was never targeted is itself a finding.
+SWITCH (
+    TRUE (),
+    ISBLANK ( [Revenue Target] ) && NOT ISBLANK ( [Revenue] ), "No target set",
+    ISBLANK ( [Revenue] ), "No actuals",
+    [Revenue] >= [Revenue Target], "Met",
+    "Missed"
+)
+
+
+// =============================================================================
+// FOLDER: 09 Formatting helpers
+// =============================================================================
+
+KPI Colour Margin =
+// For conditional formatting by field value on the KPI cards.
+SWITCH (
+    TRUE (),
+    [Margin Change (pp)] <= -2, "#B3261E",
+    [Margin Change (pp)] <   0, "#E8A33D",
+    "#1E7B4F"
+)
+
+Last Refresh =
+"Data through " & FORMAT ( CALCULATE ( MAX ( dim_date[date_key] ), REMOVEFILTERS () ), "d MMM yyyy" )
+// Pinned to the data, not to NOW(). A dashboard that says "refreshed today"
+// while showing data from December is worse than one that says nothing.

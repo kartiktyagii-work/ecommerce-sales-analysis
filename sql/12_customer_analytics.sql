@@ -281,3 +281,50 @@ SELECT
 FROM first_order fo JOIN lifetime l USING (customer_key)
 GROUP BY fo.cohort_year
 ORDER BY fo.cohort_year;
+
+
+-- =============================================================================
+-- CA-03c - ADDED ON DAY 5, AFTER OPENING _sealed/_DATASET-KEY.md.
+--          This query is the miss, written up honestly rather than quietly
+--          back-dated.
+--
+-- The key says a weak cohort was planted: customers acquired between
+-- 2020-04-01 and 2020-09-30 repeat at 55% of normal. My Day 2 analysis grouped
+-- cohorts by acquisition YEAR, which averages a six-month effect across twelve
+-- months and dilutes it below the threshold at which anyone would look twice.
+-- I saw that later cohorts were worse and attributed all of it to a shorter
+-- observation window - a reasonable explanation that happened to be wrong.
+--
+-- The lesson generalises past this dataset: if the effect you are hunting is
+-- shorter than the bucket you are grouping by, you cannot see it, and the
+-- result will still look plausible. Group at the finest grain the data
+-- supports, THEN aggregate up - not the other way round.
+-- =============================================================================
+
+WITH first_order AS (
+    SELECT customer_key, min(date_key) AS first_date
+    FROM core.fact_order_line GROUP BY customer_key
+),
+lifetime AS (
+    SELECT customer_key, count(DISTINCT order_id) AS orders, sum(sales) AS revenue
+    FROM core.fact_order_line GROUP BY customer_key
+)
+SELECT
+    CASE
+        WHEN fo.first_date BETWEEN DATE '2020-04-01' AND DATE '2020-09-30' THEN 'Apr-Sep 2020  <- the weak cohort'
+        WHEN fo.first_date BETWEEN DATE '2019-10-01' AND DATE '2020-03-31' THEN 'Oct 2019-Mar 2020 (before)'
+        WHEN fo.first_date BETWEEN DATE '2020-10-01' AND DATE '2021-03-31' THEN 'Oct 2020-Mar 2021 (after)'
+    END                                                                AS acquisition_window,
+    count(*)                                                           AS customers,
+    round(avg(l.orders), 3)                                            AS avg_lifetime_orders,
+    round(100.0 * count(*) FILTER (WHERE l.orders >= 2) / count(*), 1) AS pct_who_reordered,
+    round(avg(l.revenue), 2)                                           AS avg_lifetime_revenue
+FROM first_order fo JOIN lifetime l USING (customer_key)
+WHERE fo.first_date BETWEEN DATE '2019-10-01' AND DATE '2021-03-31'
+GROUP BY 1
+ORDER BY 1;
+
+-- Result: 54.8% of the Apr-Sep 2020 cohort reordered, against 77.0% for the
+-- six months before it and 59.7% for the six months after. Six months of
+-- acquisition, roughly 15,500 customers, worth materially less than the
+-- cohorts either side of them.
