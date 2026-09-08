@@ -3,8 +3,9 @@
 Two phases. **Build** (01-07) turns three raw files into a trustworthy star schema. **Analysis**
 (10-16) answers the question register in `../analysis/questions.md` — the one *you* wrote.
 
-Every file is a skeleton with `-- TODO` markers. The comments tell you what the block is for and
-which trap lives near it. They do **not** give you the query. That is the project.
+**All 18 files are implemented and run clean end to end.** Each carries the reasoning above the
+query: what the block is for, which trap lives near it, and why the approach chosen beat the
+alternative. Run them in numbered order against a database built by `00_setup.sql`.
 
 ## Build
 
@@ -29,7 +30,8 @@ which trap lives near it. They do **not** give you the query. That is the projec
 | `13_regional_performance.sql` | `RP*` | |
 | `14_returns_analysis.sql` | `RT*` | Two different grains — mind the join |
 | `15_targets.sql` | `TG*` | The messy second source |
-| `16_discount_counterfactual.sql` | the decision | **Day 3 only**, after the change request |
+| `16_discount_counterfactual.sql` | the decision | Written on Day 3, after the change request |
+| `18_gate_values.sql` | — | Reference values for the DAX gate, **including the wrong versions** so a mismatched measure identifies which mistake you made |
 
 ## Three schemas, deliberately
 

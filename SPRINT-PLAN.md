@@ -2,6 +2,26 @@
 
 36 hours: 4 full days + a half day. Times are offsets from whenever you start, not clock times.
 
+---
+
+## Outcome — completed, tagged `v1.0`
+
+| Day | Status | Evidence |
+|---|---|---|
+| **0** Questions | ✅ | 37 questions in 7 groups, scored 17/25 against the sealed list, 7 added — [`analysis/questions.md`](analysis/questions.md) |
+| **1** Ingest, prove, model | ✅ | 7-table star schema, 8 indexes, **15/15 reconciliation PASS** at zero tolerance |
+| **2** Analysis | ✅ | `10_`-`15_`, every question answered with the number recorded |
+| **3** Change request + model | ✅ | Re-scope written *before* rebuilding, counterfactual as a range, 42 DAX measures, RLS/OLS designed, DAX-vs-SQL gate specified with 5 mismatches documented |
+| **4** Dashboard | ◐ | Four pages, theme and interactions fully specified in [`powerbi/BUILD-RUNBOOK.md`](powerbi/BUILD-RUNBOOK.md); the `.pbix` itself is ~3 h of GUI assembly with no decisions left |
+| **5** Prove, grade, ship | ◐ | Write-up, self-assessment (**9/10 signals, 6/7 defects**), resume material and git history all complete. **The user test is outstanding** — it needs a real person and cannot be simulated; protocol in [`analysis/uat-notes.md`](analysis/uat-notes.md) |
+
+**Never-cut list:** reconciliation gate ✅ · DAX-vs-SQL gate ✅ · write-up ✅ · user test ◐.
+
+Everything below is the plan as written before starting, left unedited.
+
+---
+
+
 > **This is the teaching project.** Hints are extensive, the data is forgiving, and you check your
 > work against sealed files at the end of each phase. The telecom project is where you do it
 > unaided. Read [`../_shared/ANALYST-PRIMER.md`](../_shared/ANALYST-PRIMER.md) §1-§3 first — it
