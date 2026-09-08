@@ -177,6 +177,74 @@ ORDER BY year;
 
 
 -- =============================================================================
+-- SP-04b - Of the margin decline, how much is discounting and how much is not?
+-- approach: split total margin into discount bands, then decompose the change
+--           the same way as SP-04 but across bands instead of across years:
+--             mix effect  = (weight_2021 - weight_2018) x margin_2018
+--             rate effect = weight_2021 x (margin_2021 - margin_2018)
+--           Mix = revenue moving INTO deeper discount bands. Rate = margin
+--           falling WITHIN a band, including the 0% band - which by definition
+--           has nothing to do with discounting at all.
+--
+--           This is the query that stops the analysis from simply confirming
+--           what Finance already believed. Ritu's hypothesis is right about
+--           the biggest piece and wrong about the whole.
+-- =============================================================================
+
+WITH b AS (
+    SELECT d.year,
+           CASE WHEN f.discount = 0    THEN '1 0%'
+                WHEN f.discount < 0.20 THEN '2 1-19%'
+                WHEN f.discount < 0.30 THEN '3 20-29%'
+                WHEN f.discount < 0.50 THEN '4 30-49%'
+                ELSE                        '5 50%+' END AS band,
+           sum(f.sales) AS revenue, sum(f.profit) AS profit
+    FROM core.fact_order_line f JOIN core.dim_date d ON d.date_key = f.date_key
+    WHERE d.year IN (2018, 2021)
+    GROUP BY 1, 2
+),
+w AS (
+    SELECT year, band,
+           revenue / sum(revenue) OVER (PARTITION BY year) AS wt,
+           profit  / revenue                               AS mgn
+    FROM b
+),
+p AS (
+    SELECT band,
+           max(wt)  FILTER (WHERE year = 2018) AS w18, max(wt)  FILTER (WHERE year = 2021) AS w21,
+           max(mgn) FILTER (WHERE year = 2018) AS m18, max(mgn) FILTER (WHERE year = 2021) AS m21
+    FROM w GROUP BY band
+)
+SELECT band,
+       round(100 * w18, 1)              AS pct_of_revenue_2018,
+       round(100 * w21, 1)              AS pct_of_revenue_2021,
+       round(100 * m18, 2)              AS margin_2018_pct,
+       round(100 * m21, 2)              AS margin_2021_pct,
+       round(100 * ((w21 - w18) * m18), 2) AS mix_effect_pp,
+       round(100 * (w21 * (m21 - m18)), 2) AS rate_effect_pp
+FROM p ORDER BY band;
+
+-- The totals, which must sum to the actual margin change of -8.39 pp.
+WITH b AS (
+    SELECT d.year,
+           CASE WHEN f.discount = 0 THEN '1 0%' WHEN f.discount < 0.20 THEN '2 1-19%'
+                WHEN f.discount < 0.30 THEN '3 20-29%' WHEN f.discount < 0.50 THEN '4 30-49%'
+                ELSE '5 50%+' END AS band,
+           sum(f.sales) AS revenue, sum(f.profit) AS profit
+    FROM core.fact_order_line f JOIN core.dim_date d ON d.date_key = f.date_key
+    WHERE d.year IN (2018, 2021) GROUP BY 1, 2
+),
+w AS (SELECT year, band, revenue / sum(revenue) OVER (PARTITION BY year) AS wt, profit / revenue AS mgn FROM b),
+p AS (SELECT band, max(wt) FILTER (WHERE year = 2018) w18, max(wt) FILTER (WHERE year = 2021) w21,
+             max(mgn) FILTER (WHERE year = 2018) m18, max(mgn) FILTER (WHERE year = 2021) m21
+      FROM w GROUP BY band)
+SELECT round(100 * sum((w21 - w18) * m18), 2)                                AS total_mix_effect_pp,
+       round(100 * sum(w21 * (m21 - m18)), 2)                                AS total_rate_effect_pp,
+       round(100 * (sum((w21 - w18) * m18) + sum(w21 * (m21 - m18))), 2)     AS total_margin_change_pp
+FROM p;
+
+
+-- =============================================================================
 -- SP-05 - Which months, products or categories contributed most to the margin
 --         decline?
 -- approach: contribution-to-change. For the year pair that actually declined
