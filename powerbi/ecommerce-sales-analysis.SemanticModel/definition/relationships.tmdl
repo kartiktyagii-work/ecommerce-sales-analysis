@@ -1,0 +1,27 @@
+relationship 14a0f69a-7f64-4cb8-b9b3-0a675abfbaef
+	fromColumn: fact_order_line.date_key
+	toColumn: dim_date.date_key
+
+relationship 3fc8edfa-41c8-4128-a1b5-8ea4e8bfb41b
+	fromColumn: fact_order_line.customer_key
+	toColumn: dim_customer.customer_key
+
+relationship 0fc4590e-5fa7-4c60-8aa4-abd24b5b462c
+	fromColumn: fact_order_line.product_key
+	toColumn: dim_product.product_key
+
+relationship 44df1806-96ca-4901-b92d-52417d2d1d73
+	fromColumn: fact_order_line.geography_key
+	toColumn: dim_geography.geography_key
+
+relationship e5683b53-5540-4141-836b-4bab142e14ea
+	fromColumn: fact_return.date_key
+	toColumn: dim_date.date_key
+
+relationship 40e1ba96-85b7-40ed-a12d-02b1de708f7b
+	fromColumn: fact_return.customer_key
+	toColumn: dim_customer.customer_key
+
+relationship 7608821a-6543-4ed3-a648-b7c4b6d22052
+	fromColumn: fact_return.geography_key
+	toColumn: dim_geography.geography_key

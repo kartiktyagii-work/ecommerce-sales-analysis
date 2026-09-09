@@ -6,7 +6,7 @@
 
 | | |
 |---|---|
-| **Status** | SQL, model and analysis **complete and reconciled**. Power BI file assembles from [`powerbi/BUILD-RUNBOOK.md`](powerbi/BUILD-RUNBOOK.md) — see *What is and is not built* below |
+| **Status** | SQL, model and analysis **complete and reconciled**. Power BI ships as a [`.pbip` project](powerbi/) — open it in Power BI Desktop and save as `.pbix` |
 | **Stack** | PostgreSQL 16 · SQL (window functions, CTEs, `EXPLAIN ANALYZE`) · Power BI · DAX |
 | **Data** | Tableau Sample Superstore's real product and geography structure, scaled to **996,567 clean order lines** across 2018-2021, plus a returns file and a deliberately damaged regional targets file |
 | **Scale** | 337,737 orders · 107,688 customers · 1,862 products · $218.6M revenue |
@@ -346,10 +346,23 @@ does less.
 - A CVD-validated Power BI theme, [`powerbi/theme.json`](powerbi/theme.json)
 - The complete data-quality log, query-tuning record, learning log and self-assessment
 
-**Not yet built:** the `.pbix` itself. Power BI Desktop is a GUI, so the model, the measures, the
-four page designs, the security configuration and the validation numbers are all specified in
-[`powerbi/BUILD-RUNBOOK.md`](powerbi/BUILD-RUNBOOK.md) — roughly three hours of assembly with no
-decisions left to make.
+- **The Power BI project**, [`powerbi/ecommerce-sales-analysis.pbip`](powerbi/) — a Power BI
+  Project is a `.pbix` stored as text rather than as a binary. It carries the 11-table model with
+  its M queries, all 59 measures in 9 display folders, the 7 relationships, `dim_date` marked as a
+  date table, both what-if parameters, both security roles, and a four-page report of 38 visuals.
+  Open it in Power BI Desktop, supply PostgreSQL credentials, and `Save as` a `.pbix`.
+
+**Verified how far?** The model is generated from the live database schema, and every one of the
+report's 68 field references was checked to resolve against it, with every JSON file parsed. But
+**the project was never opened in Power BI Desktop before delivery** — that needs the GUI. The
+model is the part I am confident in; a visual may need adjusting. If the report is rejected
+outright, [`powerbi/_fallback-blank-report/`](powerbi/_fallback-blank-report/) swaps in a blank
+page and keeps the whole model, and [`powerbi/BUILD-RUNBOOK.md`](powerbi/BUILD-RUNBOOK.md) still
+specifies every page click by click.
+
+**Still to do by hand:** apply [`theme.json`](powerbi/theme.json) (one click), the Phase 5
+interactivity (drill-through, tooltip page, bookmarks, sync slicers, alt text), object-level
+security via Tabular Editor, and the Phase 7 DAX-vs-SQL gate.
 
 **Also outstanding: the Day 5 user test.** It requires a real person opening the file cold, and it
 is not something that can be simulated — the whole value of it is finding out what a stranger
@@ -365,7 +378,8 @@ sql/                 build + analysis scripts, numbered in run order
   10-16              the analysis, one file per question group
   18                 reference values for the DAX gate
 analysis/            question register, data-quality log, query tuning, learning log, UAT protocol
-powerbi/             measures.dax, theme.json, BUILD-RUNBOOK.md, dax-vs-sql-gate.md
+powerbi/             *.pbip Power BI project (model + report as text), measures.dax,
+                     theme.json, BUILD-RUNBOOK.md, dax-vs-sql-gate.md
 _sealed/             dataset builder + key (opened Day 5)
 ```
 

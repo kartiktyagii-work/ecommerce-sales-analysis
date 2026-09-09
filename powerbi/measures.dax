@@ -1,10 +1,17 @@
 // =============================================================================
-// measures.dax — the complete measure layer, 42 measures
+// measures.dax — the complete measure layer
 // =============================================================================
-// Paste into Power BI Desktop. Every measure lives on a disconnected table
-// called _Measures (Home ▸ Enter data ▸ one dummy column ▸ delete the column
-// after the first measure lands on it), organised by the display folders
-// named in the comments.
+// THESE ARE ALREADY BUILT. The generated Power BI project at
+// powerbi/ecommerce-sales-analysis.pbip ships all of them, in their display
+// folders, with these formats. This file is the readable copy — it carries the
+// reasoning, which TMDL comments do not show in the Power BI UI.
+//
+// Paste from here only if you are rebuilding the model by hand.
+// =============================================================================
+// Every measure lives on a disconnected table called _Measures, organised by
+// the display folders named in the comments. (Building by hand: Home ▸ Enter
+// data ▸ one dummy column ▸ delete the column after the first measure lands
+// on it.)
 //
 // CONVENTIONS USED THROUGHOUT, and why
 // -----------------------------------------------------------------------------
@@ -256,6 +263,9 @@ Discount Cap = GENERATESERIES ( 0.05, 0.60, 0.05 )      // calculated TABLE
 Discount Cap Value =
 SELECTEDVALUE ( 'Discount Cap'[Discount Cap], 0.30 )
 
+Survival Rate Value =
+SELECTEDVALUE ( 'Survival Rate'[Survival Rate], 0.75 )
+
 Margin Recovery (Upper) =
 // Every affected order survives the cap, repriced at the cap.
 // Profit gain per line = revenue gain, because cost does not move with the
@@ -283,11 +293,8 @@ RETURN
 
 Margin Recovery (at stated survival) =
 // The middle of the range, with the assumption on screen instead of hidden.
-// Pair with a second what-if parameter 'Survival Rate' = GENERATESERIES(0,1,0.05).
-VAR Survival = SELECTEDVALUE ( 'Survival Rate'[Survival Rate], 0.75 )
-RETURN
-    [Margin Recovery (Upper)] * Survival
-  + [Margin Recovery (Lower)] * ( 1 - Survival )
+[Margin Recovery (Upper)] * [Survival Rate Value]
+  + [Margin Recovery (Lower)] * ( 1 - [Survival Rate Value] )
 
 Break-even Survival Rate =
 // Below this share of affected orders surviving, the cap destroys more than it
@@ -389,8 +396,19 @@ DIVIDE ( [Orders], [Customers] )
 // =============================================================================
 
 Revenue Target =
-SUM ( fact_target[revenue_target] )
+CALCULATE (
+    SUM ( fact_target[revenue_target] ),
+    TREATAS ( VALUES ( dim_date[year] ),          fact_target[year] ),
+    TREATAS ( VALUES ( dim_geography[region] ),   fact_target[region] )
+)
 // ✅ SQL: 15_ TA-01
+// fact_target is deliberately DISCONNECTED — it has no key columns, and its
+// only join candidates (region text, year number) are non-unique on the other
+// side. TREATAS applies the visible year and region as filters on it instead,
+// which avoids inventing a dim_region and a dim_year purely to carry 15 rows.
+// The consequence, and it matters: group target visuals by
+// dim_geography[region], NOT by fact_target[region] — the latter is outside
+// the filter path and will show every region's target in every row.
 
 Target Attainment % =
 DIVIDE ( [Revenue], [Revenue Target] )

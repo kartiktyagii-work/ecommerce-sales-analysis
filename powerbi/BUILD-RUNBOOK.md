@@ -4,10 +4,43 @@ Everything needed to assemble `ecommerce-sales-analysis.pbix` from the finished
 PostgreSQL model. Every number quoted on a page traces to a query in `../sql/`, and
 every measure is in [`measures.dax`](measures.dax).
 
-> **What this file is.** The SQL, the model design, the measure layer, the page
-> designs and the validation numbers are all finished. Power BI Desktop is a GUI
-> that has to be driven by hand, so this is the click-by-click for that last step —
-> written the way I would hand it to someone taking the file over. Budget ~3 hours.
+> **Read this first — most of what follows is already built.**
+>
+> `ecommerce-sales-analysis.pbip` in this folder is a **Power BI Project**: the same
+> thing as a `.pbix`, stored as text instead of as a binary. It already contains the
+> model, all 59 measures in their display folders, the relationships, both what-if
+> parameters, both security roles and a four-page report.
+>
+> **To use it:** double-click `ecommerce-sales-analysis.pbip` ▸ Power BI Desktop opens
+> it ▸ enter your PostgreSQL credentials when prompted ▸ `File ▸ Save as` ▸ `.pbix`.
+>
+> Everything below is the **manual build**, kept for two reasons: it is the fallback if
+> the generated report does not open (see `_fallback-blank-report/README.md`), and it
+> is the record of *why* each setting is what it is — which the `.pbip` cannot tell you.
+> Budget ~3 hours if you build it by hand.
+
+## What the generated project already does for you
+
+| Runbook phase | Already in the `.pbip`? | Notes |
+|---|---|---|
+| 0.1 Get data | ✅ | Seven `core.*` tables plus the `v_subcat_breakeven` view, Import mode, typed in M so the declared types always match |
+| 0.2 Power Query | ✅ | `Table.TransformColumnTypes` per table — money as `Currency.Type` (fixed decimal), dates as `type date` |
+| 0.3 Relationships | ✅ | All 7, many-to-one, single direction. `fact_target` deliberately disconnected — see the `Revenue Target` measure |
+| 0.4 Mark as date table | ✅ | `dim_date` carries `dataCategory: Time` and `date_key` is `isKey` |
+| 0.5 Hide / sort / categorise | ✅ | Keys hidden, `month_name`→`month_no`, geo data categories set |
+| 0.6 The 59 measures | ✅ | 9 display folders, format strings, and the SQL value each must equal in the description |
+| 0.7 What-if parameters | ✅ | `Discount Cap` and `Survival Rate` as calculated tables + their `SELECTEDVALUE` measures |
+| 0.8 Theme | ❌ | **Do this yourself:** `View ▸ Themes ▸ Browse` ▸ `theme.json`. One click; not worth the risk of embedding it |
+| Phases 1-4, pages | ✅ | 38 visuals across 4 pages — but see the caveat below |
+| Phase 5 interactivity | ❌ | Drill-through, tooltip page, bookmarks, sync slicers, alt text are yours |
+| Phase 6 OLS | ❌ | Needs Tabular Editor. RLS roles *are* in the file |
+| Phase 7 the gate | ❌ | **Do not skip.** `dax-vs-sql-gate.md` |
+
+**The caveat, stated plainly.** The model I am confident about. The report was authored as
+PBIR text and validated statically — all 68 field references resolve against the model and
+every JSON file parses — but it was never opened in Power BI Desktop before delivery. If a
+visual renders oddly, fix it in the GUI; if the report as a whole is rejected, swap in
+`_fallback-blank-report/` and you still have the entire model.
 
 **Page order is deliberate and reflects the Day 3 change request**: margin recovery
 is Page 1. Customer analytics was demoted to Page 4 and kept only because it was

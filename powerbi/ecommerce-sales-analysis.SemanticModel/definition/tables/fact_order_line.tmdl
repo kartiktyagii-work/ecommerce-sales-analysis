@@ -1,0 +1,157 @@
+table fact_order_line
+
+	column order_line_key
+		dataType: int64
+		formatString: 0
+		isHidden
+		summarizeBy: none
+		sourceColumn: order_line_key
+
+		annotation SummarizationSetBy = Automatic
+
+	column order_id
+		dataType: string
+		summarizeBy: none
+		sourceColumn: order_id
+
+		annotation SummarizationSetBy = Automatic
+
+	column date_key
+		dataType: dateTime
+		isHidden
+		summarizeBy: none
+		sourceColumn: date_key
+
+		annotation SummarizationSetBy = Automatic
+
+	column customer_key
+		dataType: int64
+		formatString: 0
+		isHidden
+		summarizeBy: none
+		sourceColumn: customer_key
+
+		annotation SummarizationSetBy = Automatic
+
+	column product_key
+		dataType: int64
+		formatString: 0
+		isHidden
+		summarizeBy: none
+		sourceColumn: product_key
+
+		annotation SummarizationSetBy = Automatic
+
+	column geography_key
+		dataType: int64
+		formatString: 0
+		isHidden
+		summarizeBy: none
+		sourceColumn: geography_key
+
+		annotation SummarizationSetBy = Automatic
+
+	column ship_date
+		dataType: dateTime
+		summarizeBy: none
+		sourceColumn: ship_date
+
+		annotation SummarizationSetBy = Automatic
+
+	column ship_mode
+		dataType: string
+		summarizeBy: none
+		sourceColumn: ship_mode
+
+		annotation SummarizationSetBy = Automatic
+
+	column ship_date_invalid
+		dataType: boolean
+		isHidden
+		summarizeBy: none
+		sourceColumn: ship_date_invalid
+
+		annotation SummarizationSetBy = Automatic
+
+	column sales
+		dataType: decimal
+		formatString: \$#,0;(\$#,0);\$#,0
+		summarizeBy: sum
+		sourceColumn: sales
+
+		annotation SummarizationSetBy = Automatic
+
+	column quantity
+		dataType: int64
+		formatString: #,0
+		summarizeBy: sum
+		sourceColumn: quantity
+
+		annotation SummarizationSetBy = Automatic
+
+	column discount
+		dataType: decimal
+		formatString: 0.00%;-0.00%;0.00%
+		summarizeBy: none
+		sourceColumn: discount
+
+		annotation SummarizationSetBy = Automatic
+
+	column profit
+		dataType: decimal
+		formatString: \$#,0;(\$#,0);\$#,0
+		summarizeBy: sum
+		sourceColumn: profit
+
+		annotation SummarizationSetBy = Automatic
+
+	column gross_list_value
+		dataType: decimal
+		formatString: \$#,0;(\$#,0);\$#,0
+		isHidden
+		summarizeBy: sum
+		sourceColumn: gross_list_value
+
+		annotation SummarizationSetBy = Automatic
+
+	column discount_value
+		dataType: decimal
+		formatString: \$#,0;(\$#,0);\$#,0
+		isHidden
+		summarizeBy: sum
+		sourceColumn: discount_value
+
+		annotation SummarizationSetBy = Automatic
+
+	column is_loss_making
+		dataType: boolean
+		summarizeBy: none
+		sourceColumn: is_loss_making
+
+		annotation SummarizationSetBy = Automatic
+
+	column is_returned
+		dataType: boolean
+		summarizeBy: none
+		sourceColumn: is_returned
+
+		annotation SummarizationSetBy = Automatic
+
+	column discount_band = ROUNDDOWN ( fact_order_line[discount] * 20, 0 ) / 20
+		dataType: decimal
+		formatString: 0%;-0%;0%
+		summarizeBy: none
+
+		annotation SummarizationSetBy = Automatic
+
+	partition fact_order_line = m
+		mode: import
+		source =
+				let
+				    Source = PostgreSQL.Database("127.0.0.1", "ecommerce"),
+				    Data = Source{[Schema="core",Item="fact_order_line"]}[Data],
+				    Typed = Table.TransformColumnTypes(Data, {{"order_line_key", Int64.Type},{"order_id", type text},{"date_key", type date},{"customer_key", Int64.Type},{"product_key", Int64.Type},{"geography_key", Int64.Type},{"ship_date", type date},{"ship_mode", type text},{"ship_date_invalid", type logical},{"sales", Currency.Type},{"quantity", Int64.Type},{"discount", Currency.Type},{"profit", Currency.Type},{"gross_list_value", Currency.Type},{"discount_value", Currency.Type},{"is_loss_making", type logical},{"is_returned", type logical}})
+				in
+				    Typed
+
+	annotation PBI_ResultType = Table

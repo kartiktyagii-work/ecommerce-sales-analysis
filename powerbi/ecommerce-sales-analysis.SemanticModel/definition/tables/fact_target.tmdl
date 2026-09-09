@@ -1,0 +1,59 @@
+table fact_target
+
+	column region
+		dataType: string
+		summarizeBy: none
+		sourceColumn: region
+
+		annotation SummarizationSetBy = Automatic
+
+	column year
+		dataType: int64
+		formatString: 0
+		summarizeBy: none
+		sourceColumn: year
+
+		annotation SummarizationSetBy = Automatic
+
+	column revenue_target
+		dataType: decimal
+		formatString: \$#,0;(\$#,0);\$#,0
+		summarizeBy: sum
+		sourceColumn: revenue_target
+
+		annotation SummarizationSetBy = Automatic
+
+	column raw_target_as_supplied
+		dataType: decimal
+		formatString: \$#,0;(\$#,0);\$#,0
+		isHidden
+		summarizeBy: none
+		sourceColumn: raw_target_as_supplied
+
+		annotation SummarizationSetBy = Automatic
+
+	column supplied_units
+		dataType: string
+		summarizeBy: none
+		sourceColumn: supplied_units
+
+		annotation SummarizationSetBy = Automatic
+
+	column supplied_owner
+		dataType: string
+		summarizeBy: none
+		sourceColumn: supplied_owner
+
+		annotation SummarizationSetBy = Automatic
+
+	partition fact_target = m
+		mode: import
+		source =
+				let
+				    Source = PostgreSQL.Database("127.0.0.1", "ecommerce"),
+				    Data = Source{[Schema="core",Item="fact_target"]}[Data],
+				    Typed = Table.TransformColumnTypes(Data, {{"region", type text},{"year", Int64.Type},{"revenue_target", Currency.Type},{"raw_target_as_supplied", Currency.Type},{"supplied_units", type text},{"supplied_owner", type text}})
+				in
+				    Typed
+
+	annotation PBI_ResultType = Table

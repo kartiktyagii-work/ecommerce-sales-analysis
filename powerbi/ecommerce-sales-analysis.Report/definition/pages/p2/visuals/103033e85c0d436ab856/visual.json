@@ -1,0 +1,44 @@
+{
+  "$schema": "https://developer.microsoft.com/json-schemas/fabric/item/report/definition/visualContainer/1.0.0/schema.json",
+  "name": "103033e85c0d436ab856",
+  "position": {
+    "x": 16,
+    "y": 12,
+    "z": 18000,
+    "width": 900,
+    "height": 44,
+    "tabOrder": 18000
+  },
+  "visual": {
+    "visualType": "textbox",
+    "objects": {
+      "general": [
+        {
+          "properties": {
+            "paragraphs": [
+              {
+                "textRuns": [
+                  {
+                    "value": "Product and category - no product loses money; the losses live in discount bands\n",
+                    "textStyle": {
+                      "fontSize": "18pt",
+                      "fontWeight": "bold",
+                      "color": "#0B0B0B"
+                    }
+                  },
+                  {
+                    "value": "Margin is SUM(profit) / SUM(sales) throughout - a ratio of sums, never an average of ratios",
+                    "textStyle": {
+                      "fontSize": "10pt",
+                      "color": "#52514E"
+                    }
+                  }
+                ]
+              }
+            ]
+          }
+        }
+      ]
+    }
+  }
+}

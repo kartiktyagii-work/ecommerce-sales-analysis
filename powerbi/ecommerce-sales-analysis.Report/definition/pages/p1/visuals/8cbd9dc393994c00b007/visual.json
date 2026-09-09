@@ -1,0 +1,94 @@
+{
+  "$schema": "https://developer.microsoft.com/json-schemas/fabric/item/report/definition/visualContainer/1.0.0/schema.json",
+  "name": "8cbd9dc393994c00b007",
+  "position": {
+    "x": 16,
+    "y": 478,
+    "z": 15000,
+    "width": 396,
+    "height": 226,
+    "tabOrder": 15000
+  },
+  "visual": {
+    "visualType": "clusteredColumnChart",
+    "query": {
+      "queryState": {
+        "Y": {
+          "projections": [
+            {
+              "field": {
+                "Measure": {
+                  "Expression": {
+                    "SourceRef": {
+                      "Entity": "_Measures"
+                    }
+                  },
+                  "Property": "Margin Recovery (Upper)"
+                }
+              },
+              "queryRef": "_Measures.Margin Recovery (Upper)",
+              "nativeQueryRef": "Margin Recovery (Upper)"
+            },
+            {
+              "field": {
+                "Measure": {
+                  "Expression": {
+                    "SourceRef": {
+                      "Entity": "_Measures"
+                    }
+                  },
+                  "Property": "Margin Recovery (Lower)"
+                }
+              },
+              "queryRef": "_Measures.Margin Recovery (Lower)",
+              "nativeQueryRef": "Margin Recovery (Lower)"
+            },
+            {
+              "field": {
+                "Measure": {
+                  "Expression": {
+                    "SourceRef": {
+                      "Entity": "_Measures"
+                    }
+                  },
+                  "Property": "Margin Recovery (at stated survival)"
+                }
+              },
+              "queryRef": "_Measures.Margin Recovery (at stated survival)",
+              "nativeQueryRef": "Margin Recovery (at stated survival)"
+            }
+          ]
+        }
+      }
+    },
+    "visualContainerObjects": {
+      "title": [
+        {
+          "properties": {
+            "show": {
+              "expr": {
+                "Literal": {
+                  "Value": "true"
+                }
+              }
+            },
+            "text": {
+              "expr": {
+                "Literal": {
+                  "Value": "'What a cap is worth - a range, not a number'"
+                }
+              }
+            },
+            "heading": {
+              "expr": {
+                "Literal": {
+                  "Value": "'Heading3'"
+                }
+              }
+            }
+          }
+        }
+      ]
+    }
+  }
+}

@@ -1,0 +1,44 @@
+{
+  "$schema": "https://developer.microsoft.com/json-schemas/fabric/item/report/definition/visualContainer/1.0.0/schema.json",
+  "name": "b31981be65a046d8a97e",
+  "position": {
+    "x": 16,
+    "y": 12,
+    "z": 1000,
+    "width": 900,
+    "height": 52,
+    "tabOrder": 1000
+  },
+  "visual": {
+    "visualType": "textbox",
+    "objects": {
+      "general": [
+        {
+          "properties": {
+            "paragraphs": [
+              {
+                "textRuns": [
+                  {
+                    "value": "Margin recovery - where the profit went, and what a discount cap is worth\n",
+                    "textStyle": {
+                      "fontSize": "18pt",
+                      "fontWeight": "bold",
+                      "color": "#0B0B0B"
+                    }
+                  },
+                  {
+                    "value": "Northwind Retail - FY2018-FY2021 - revenue is gross of returns unless a visual says otherwise",
+                    "textStyle": {
+                      "fontSize": "10pt",
+                      "color": "#52514E"
+                    }
+                  }
+                ]
+              }
+            ]
+          }
+        }
+      ]
+    }
+  }
+}

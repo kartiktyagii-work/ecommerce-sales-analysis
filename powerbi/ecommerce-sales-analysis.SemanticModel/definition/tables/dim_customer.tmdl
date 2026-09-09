@@ -1,0 +1,51 @@
+table dim_customer
+
+	column customer_key
+		dataType: int64
+		formatString: 0
+		isHidden
+		summarizeBy: none
+		sourceColumn: customer_key
+
+		annotation SummarizationSetBy = Automatic
+
+	column customer_id
+		dataType: string
+		summarizeBy: none
+		sourceColumn: customer_id
+
+		annotation SummarizationSetBy = Automatic
+
+	column customer_name
+		dataType: string
+		isHidden
+		summarizeBy: none
+		sourceColumn: customer_name
+
+		annotation SummarizationSetBy = Automatic
+
+	column segment
+		dataType: string
+		summarizeBy: none
+		sourceColumn: segment
+
+		annotation SummarizationSetBy = Automatic
+
+	column customer_name_masked
+		dataType: string
+		summarizeBy: none
+		sourceColumn: customer_name_masked
+
+		annotation SummarizationSetBy = Automatic
+
+	partition dim_customer = m
+		mode: import
+		source =
+				let
+				    Source = PostgreSQL.Database("127.0.0.1", "ecommerce"),
+				    Data = Source{[Schema="core",Item="dim_customer"]}[Data],
+				    Typed = Table.TransformColumnTypes(Data, {{"customer_key", Int64.Type},{"customer_id", type text},{"customer_name", type text},{"segment", type text},{"customer_name_masked", type text}})
+				in
+				    Typed
+
+	annotation PBI_ResultType = Table

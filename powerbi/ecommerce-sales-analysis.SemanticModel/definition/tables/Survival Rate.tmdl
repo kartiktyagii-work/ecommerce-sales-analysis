@@ -1,0 +1,14 @@
+table 'Survival Rate'
+
+	column 'Survival Rate'
+		dataType: decimal
+		formatString: 0%;-0%;0%
+		summarizeBy: none
+		sourceColumn: [Value]
+
+		annotation SummarizationSetBy = Automatic
+
+	partition 'Survival Rate' = calculated
+		mode: import
+		source = GENERATESERIES(0, 1, 0.05)
+

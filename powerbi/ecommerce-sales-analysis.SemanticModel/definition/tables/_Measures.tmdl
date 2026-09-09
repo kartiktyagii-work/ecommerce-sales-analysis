@@ -1,0 +1,286 @@
+table _Measures
+
+	/// Line value after discount, BEFORE returns. Ties to source exactly. SQL: 218,617,012.65
+	measure Revenue = SUM ( fact_order_line[sales] )
+		formatString: \$#,0;(\$#,0);\$#,0
+		displayFolder: 01 Base
+
+	/// SQL: 47,254,458.39
+	measure Profit = SUM ( fact_order_line[profit] )
+		formatString: \$#,0;(\$#,0);\$#,0
+		displayFolder: 01 Base
+
+	/// SQL: 3,338,886
+	measure Units = SUM ( fact_order_line[quantity] )
+		formatString: #,0
+		displayFolder: 01 Base
+
+	/// SQL: 996,567
+	measure 'Order Lines' = COUNTROWS ( fact_order_line )
+		formatString: #,0
+		displayFolder: 01 Base
+
+	/// DISTINCTCOUNT, not COUNTROWS: the table is at LINE grain. SQL: 337,737
+	measure Orders = DISTINCTCOUNT ( fact_order_line[order_id] )
+		formatString: #,0
+		displayFolder: 01 Base
+
+	/// Counted from the FACT so the date slicer applies. SQL: 107,688
+	measure Customers = DISTINCTCOUNT ( fact_order_line[customer_key] )
+		formatString: #,0
+		displayFolder: 01 Base
+
+	/// SQL: 30,309,470.42
+	measure 'Discount Value' = SUM ( fact_order_line[discount_value] )
+		formatString: \$#,0;(\$#,0);\$#,0
+		displayFolder: 01 Base
+
+	/// SQL: 248,926,483.07
+	measure 'Gross List Value' = SUM ( fact_order_line[gross_list_value] )
+		formatString: \$#,0;(\$#,0);\$#,0
+		displayFolder: 01 Base
+
+	/// Ratio of sums, never the average of per-row ratios. SQL: 21.62%
+	measure 'Margin %' = DIVIDE ( [Profit], [Revenue] )
+		formatString: 0.00%;-0.00%;0.00%
+		displayFolder: 02 Ratios
+
+	/// Per ORDER. AVERAGE(sales) gives 219.37 - the average LINE. SQL: 647.30
+	measure AOV = DIVIDE ( [Revenue], [Orders] )
+		formatString: \$#,0.00;(\$#,0.00);\$#,0.00
+		displayFolder: 02 Ratios
+
+	/// SQL: 2.95
+	measure 'Avg Lines per Order' = DIVIDE ( [Order Lines], [Orders] )
+		formatString: 0.00
+		displayFolder: 02 Ratios
+
+	/// SQL: 2,030.10
+	measure 'Revenue per Customer' = DIVIDE ( [Revenue], [Customers] )
+		formatString: \$#,0.00;(\$#,0.00);\$#,0.00
+		displayFolder: 02 Ratios
+
+	measure 'Avg Order Profit' = DIVIDE ( [Profit], [Orders] )
+		formatString: \$#,0.00;(\$#,0.00);\$#,0.00
+		displayFolder: 02 Ratios
+
+	/// Money given away over money chargeable. SQL: 12.18% all years, 14.89% in 2021
+	measure 'Discount % (weighted)' = DIVIDE ( [Discount Value], [Gross List Value] )
+		formatString: 0.00%;-0.00%;0.00%
+		displayFolder: 02 Ratios
+
+	/// The average LINE's rate. Differs from the weighted one by ~1.8pp in 2021.
+	measure 'Discount % (unweighted)' = AVERAGE ( fact_order_line[discount] )
+		formatString: 0.00%;-0.00%;0.00%
+		displayFolder: 02 Ratios
+
+	measure 'Revenue LY' = CALCULATE ( [Revenue], SAMEPERIODLASTYEAR ( dim_date[date_key] ) )
+		formatString: \$#,0;(\$#,0);\$#,0
+		displayFolder: 03 Time intelligence
+
+	measure 'Profit LY' = CALCULATE ( [Profit], SAMEPERIODLASTYEAR ( dim_date[date_key] ) )
+		formatString: \$#,0;(\$#,0);\$#,0
+		displayFolder: 03 Time intelligence
+
+	measure 'Revenue YoY' = [Revenue] - [Revenue LY]
+		formatString: \$#,0;(\$#,0);\$#,0
+		displayFolder: 03 Time intelligence
+
+	/// SQL: 2021 = +11.8%
+	measure 'Revenue YoY %' = DIVIDE ( [Revenue] - [Revenue LY], [Revenue LY] )
+		formatString: 0.00%;-0.00%;0.00%
+		displayFolder: 03 Time intelligence
+
+	/// SQL: 2021 = -1.3%. The headline of the project.
+	measure 'Profit YoY %' = DIVIDE ( [Profit] - [Profit LY], [Profit LY] )
+		formatString: 0.00%;-0.00%;0.00%
+		displayFolder: 03 Time intelligence
+
+	measure 'Margin % LY' = CALCULATE ( [Margin %], SAMEPERIODLASTYEAR ( dim_date[date_key] ) )
+		formatString: 0.00%;-0.00%;0.00%
+		displayFolder: 03 Time intelligence
+
+	/// Percentage POINTS, not percent. SQL: 2021 = -2.49 pp
+	measure 'Margin Change (pp)' = ( [Margin %] - [Margin % LY] ) * 100
+		formatString: 0.00
+		displayFolder: 03 Time intelligence
+
+	measure 'Revenue YTD' = TOTALYTD ( [Revenue], dim_date[date_key] )
+		formatString: \$#,0;(\$#,0);\$#,0
+		displayFolder: 03 Time intelligence
+
+	measure 'Revenue Rolling 12M' = CALCULATE ( [Revenue], DATESINPERIOD ( dim_date[date_key], MAX ( dim_date[date_key] ), -12, MONTH ) )
+		formatString: \$#,0;(\$#,0);\$#,0
+		displayFolder: 03 Time intelligence
+
+	measure 'Revenue 3M Moving Avg' = AVERAGEX ( DATESINPERIOD ( dim_date[date_key], MAX ( dim_date[date_key] ), -3, MONTH ), CALCULATE ( [Revenue] ) )
+		formatString: \$#,0;(\$#,0);\$#,0
+		displayFolder: 03 Time intelligence
+
+	/// Averages the same calendar month ACROSS years. SQL: Dec 135.5, Jan 64.3
+	measure 'Seasonality Index' = DIVIDE ( CALCULATE ( AVERAGEX ( VALUES ( dim_date[year] ), [Revenue] ), ALLEXCEPT ( dim_date, dim_date[month_no], dim_date[month_name] ) ), CALCULATE ( AVERAGEX ( VALUES ( dim_date[year_month] ), [Revenue] ), REMOVEFILTERS ( dim_date ) ) ) * 100
+		formatString: 0.0
+		displayFolder: 03 Time intelligence
+
+	/// REMOVEFILTERS on the DIMENSION. ALL(fact) would strip the date slicer too.
+	measure '% of Total Revenue' = DIVIDE ( [Revenue], CALCULATE ( [Revenue], REMOVEFILTERS ( dim_product ) ) )
+		formatString: 0.00%;-0.00%;0.00%
+		displayFolder: 04 Filter modifiers
+
+	measure '% of Total Profit' = DIVIDE ( [Profit], CALCULATE ( [Profit], REMOVEFILTERS ( dim_product ) ) )
+		formatString: 0.00%;-0.00%;0.00%
+		displayFolder: 04 Filter modifiers
+
+	measure 'Revenue Rank' = RANKX ( ALLSELECTED ( dim_product[product_name] ), [Revenue],, DESC, DENSE )
+		formatString: #,0
+		displayFolder: 04 Filter modifiers
+
+	/// The Pareto curve. SQL: 468 of 1,862 products = 80% of revenue.
+	measure 'Cumulative Revenue %' = VAR CurrentRev = [Revenue] VAR AllProducts = ALLSELECTED ( dim_product[product_name] ) VAR RunningTotal = SUMX ( FILTER ( AllProducts, [Revenue] >= CurrentRev ), [Revenue] ) VAR GrandTotal = CALCULATE ( [Revenue], AllProducts ) RETURN DIVIDE ( RunningTotal, GrandTotal )
+		formatString: 0.00%;-0.00%;0.00%
+		displayFolder: 04 Filter modifiers
+
+	measure 'Revenue (All Regions)' = CALCULATE ( [Revenue], REMOVEFILTERS ( dim_geography ) )
+		formatString: \$#,0;(\$#,0);\$#,0
+		displayFolder: 04 Filter modifiers
+
+	measure 'Margin % vs Company' = ( [Margin %] - CALCULATE ( [Margin %], REMOVEFILTERS ( dim_product, dim_geography ) ) ) * 100
+		formatString: 0.00
+		displayFolder: 04 Filter modifiers
+
+	/// SQL: 20,369,519.43
+	measure 'Revenue at 30%+ Discount' = CALCULATE ( [Revenue], KEEPFILTERS ( fact_order_line[discount] >= 0.30 ) )
+		formatString: \$#,0;(\$#,0);\$#,0
+		displayFolder: 05 Discount and margin recovery
+
+	/// KEEPFILTERS so a band slicer INTERSECTS instead of being overridden. SQL: -3,363,287.99
+	measure 'Profit at 30%+ Discount' = CALCULATE ( [Profit], KEEPFILTERS ( fact_order_line[discount] >= 0.30 ) )
+		formatString: \$#,0;(\$#,0);\$#,0
+		displayFolder: 05 Discount and margin recovery
+
+	/// Finance's question, answered literally. SQL: -2,107,706.73 all years, -1,223,143.11 in 2021
+	measure 'Profit at 50%+ Discount' = CALCULATE ( [Profit], KEEPFILTERS ( fact_order_line[discount] >= 0.50 ) )
+		formatString: \$#,0;(\$#,0);\$#,0
+		displayFolder: 05 Discount and margin recovery
+
+	measure '% Revenue Deeply Discounted' = DIVIDE ( [Revenue at 30%+ Discount], [Revenue] )
+		formatString: 0.00%;-0.00%;0.00%
+		displayFolder: 05 Discount and margin recovery
+
+	measure 'Discount Cap Value' = SELECTEDVALUE ( 'Discount Cap'[Discount Cap], 0.30 )
+		formatString: 0%;-0%;0%
+		displayFolder: 05 Discount and margin recovery
+
+	measure 'Survival Rate Value' = SELECTEDVALUE ( 'Survival Rate'[Survival Rate], 0.75 )
+		formatString: 0%;-0%;0%
+		displayFolder: 05 Discount and margin recovery
+
+	/// Every affected order survives, repriced at the cap. SQL: 2021 @30% = +3,491,277.01
+	measure 'Margin Recovery (Upper)' = VAR Cap = [Discount Cap Value] RETURN SUMX ( FILTER ( fact_order_line, fact_order_line[discount] > Cap ), fact_order_line[gross_list_value] * ( 1 - Cap ) - fact_order_line[sales] )
+		formatString: \$#,0;(\$#,0);\$#,0
+		displayFolder: 05 Discount and margin recovery
+
+	/// Every ORDER containing a capped line is lost entirely, full-price lines included. SQL: 2021 @30% = -3,305,761.75
+	measure 'Margin Recovery (Lower)' = VAR Cap = [Discount Cap Value] VAR AffectedOrders = CALCULATETABLE ( VALUES ( fact_order_line[order_id] ), KEEPFILTERS ( fact_order_line[discount] > Cap ) ) RETURN -1 * CALCULATE ( [Profit], AffectedOrders )
+		formatString: \$#,0;(\$#,0);\$#,0
+		displayFolder: 05 Discount and margin recovery
+
+	measure 'Margin Recovery (at stated survival)' = [Margin Recovery (Upper)] * [Survival Rate Value] + [Margin Recovery (Lower)] * ( 1 - [Survival Rate Value] )
+		formatString: \$#,0;(\$#,0);\$#,0
+		displayFolder: 05 Discount and margin recovery
+
+	/// Below this share of affected orders surviving, the cap destroys more than it recovers. SQL: 48.6% flat / 27.4% per sub-category
+	measure 'Break-even Survival Rate' = DIVIDE ( -[Margin Recovery (Lower)], [Margin Recovery (Upper)] - [Margin Recovery (Lower)] )
+		formatString: 0.00%;-0.00%;0.00%
+		displayFolder: 05 Discount and margin recovery
+
+	/// fact_return is ORDER grain, so COUNTROWS is right here. SQL: 27,674
+	measure 'Returned Orders' = COUNTROWS ( fact_return )
+		formatString: #,0
+		displayFolder: 06 Returns
+
+	/// Both sides at ORDER grain. Line grain gives 8.96% - a 3.23x fan-out. SQL: 8.19%
+	measure 'Return Rate %' = DIVIDE ( [Returned Orders], [Orders] )
+		formatString: 0.00%;-0.00%;0.00%
+		displayFolder: 06 Returns
+
+	measure 'Returned Revenue' = CALCULATE ( [Revenue], KEEPFILTERS ( fact_order_line[is_returned] = TRUE ) )
+		formatString: \$#,0;(\$#,0);\$#,0
+		displayFolder: 06 Returns
+
+	/// SQL: 195,391,669.92
+	measure 'Net Revenue' = [Revenue] - [Returned Revenue]
+		formatString: \$#,0;(\$#,0);\$#,0
+		displayFolder: 06 Returns
+
+	measure 'Returned Profit' = CALCULATE ( [Profit], KEEPFILTERS ( fact_order_line[is_returned] = TRUE ) )
+		formatString: \$#,0;(\$#,0);\$#,0
+		displayFolder: 06 Returns
+
+	/// SQL: 42,532,183.64
+	measure 'Net Profit' = [Profit] - [Returned Profit]
+		formatString: \$#,0;(\$#,0);\$#,0
+		displayFolder: 06 Returns
+
+	/// 21.77% - HIGHER than gross 21.62%. Returns are not what is eating the margin.
+	measure 'Net Margin %' = DIVIDE ( [Net Profit], [Net Revenue] )
+		formatString: 0.00%;-0.00%;0.00%
+		displayFolder: 06 Returns
+
+	/// 2+ ORDERS, not 2+ lines. Lines would give 94.0% instead of 72.4%. SQL: 77,964
+	measure 'Repeat Customers' = COUNTROWS ( FILTER ( VALUES ( fact_order_line[customer_key] ), CALCULATE ( DISTINCTCOUNT ( fact_order_line[order_id] ) ) >= 2 ) )
+		formatString: #,0
+		displayFolder: 07 Customer
+
+	/// SQL: 72.4%
+	measure 'Repeat Rate %' = DIVIDE ( [Repeat Customers], [Customers] )
+		formatString: 0.00%;-0.00%;0.00%
+		displayFolder: 07 Customer
+
+	/// First EVER order inside the current period. SQL: 2019 38,683 / 2020 30,751 / 2021 12,301
+	measure 'New Customers' = VAR CurrentDates = VALUES ( dim_date[date_key] ) RETURN COUNTROWS ( FILTER ( VALUES ( fact_order_line[customer_key] ), CALCULATE ( MIN ( fact_order_line[date_key] ), REMOVEFILTERS ( dim_date ) ) IN CurrentDates ) )
+		formatString: #,0
+		displayFolder: 07 Customer
+
+	/// SQL: 2021 = 1.86
+	measure 'Orders per Customer' = DIVIDE ( [Orders], [Customers] )
+		formatString: 0.00
+		displayFolder: 07 Customer
+
+	/// fact_target is deliberately disconnected; TREATAS maps the visible year and region onto it. Group visuals by dim_geography[region], not by fact_target[region].
+	measure 'Revenue Target' = CALCULATE ( SUM ( fact_target[revenue_target] ), TREATAS ( VALUES ( dim_date[year] ), fact_target[year] ), TREATAS ( VALUES ( dim_geography[region] ), fact_target[region] ) )
+		formatString: \$#,0;(\$#,0);\$#,0
+		displayFolder: 08 Targets
+
+	/// SQL 2021: East 107.7, South 107.3, Central 96.3, West 93.7
+	measure 'Target Attainment %' = DIVIDE ( [Revenue], [Revenue Target] )
+		formatString: 0.00%;-0.00%;0.00%
+		displayFolder: 08 Targets
+
+	measure 'Target Variance' = [Revenue] - [Revenue Target]
+		formatString: \$#,0;(\$#,0);\$#,0
+		displayFolder: 08 Targets
+
+	/// Central 2018 has no target in the source and must not read as a 100% miss.
+	measure 'Target Status' = SWITCH ( TRUE (), ISBLANK ( [Revenue Target] ) && NOT ISBLANK ( [Revenue] ), "No target set", ISBLANK ( [Revenue] ), "No actuals", [Revenue] >= [Revenue Target], "Met", "Missed" )
+		displayFolder: 08 Targets
+
+	measure 'KPI Colour Margin' = SWITCH ( TRUE (), [Margin Change (pp)] <= -2, "#B3261E", [Margin Change (pp)] < 0, "#E8A33D", "#1E7B4F" )
+		displayFolder: 09 Formatting helpers
+
+	/// Pinned to the data, not to NOW().
+	measure 'Last Refresh' = "Data through " & FORMAT ( CALCULATE ( MAX ( dim_date[date_key] ), REMOVEFILTERS () ), "d MMM yyyy" )
+		displayFolder: 09 Formatting helpers
+
+	column Value
+		isHidden
+		dataType: int64
+		formatString: 0
+		summarizeBy: none
+		sourceColumn: [Value]
+
+		annotation SummarizationSetBy = Automatic
+
+	partition _Measures = calculated
+		mode: import
+		source = {0}

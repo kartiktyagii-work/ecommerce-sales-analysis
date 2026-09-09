@@ -1,0 +1,5 @@
+/// Static RLS. Test with Modeling > View as > Role. Revenue must read $77,313,380.96.
+role 'West Regional Manager'
+	modelPermission: read
+
+	tablePermission dim_geography = dim_geography[region] = "West"

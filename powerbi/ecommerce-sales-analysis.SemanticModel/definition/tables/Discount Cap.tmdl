@@ -1,0 +1,14 @@
+table 'Discount Cap'
+
+	column 'Discount Cap'
+		dataType: decimal
+		formatString: 0%;-0%;0%
+		summarizeBy: none
+		sourceColumn: [Value]
+
+		annotation SummarizationSetBy = Automatic
+
+	partition 'Discount Cap' = calculated
+		mode: import
+		source = GENERATESERIES(0.05, 0.60, 0.05)
+

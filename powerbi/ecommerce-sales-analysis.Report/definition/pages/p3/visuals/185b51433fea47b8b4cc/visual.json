@@ -1,0 +1,44 @@
+{
+  "$schema": "https://developer.microsoft.com/json-schemas/fabric/item/report/definition/visualContainer/1.0.0/schema.json",
+  "name": "185b51433fea47b8b4cc",
+  "position": {
+    "x": 16,
+    "y": 12,
+    "z": 24000,
+    "width": 900,
+    "height": 44,
+    "tabOrder": 24000
+  },
+  "visual": {
+    "visualType": "textbox",
+    "objects": {
+      "general": [
+        {
+          "properties": {
+            "paragraphs": [
+              {
+                "textRuns": [
+                  {
+                    "value": "Regional performance and targets - West is 199.6% of the 2021 profit decline\n",
+                    "textStyle": {
+                      "fontSize": "18pt",
+                      "fontWeight": "bold",
+                      "color": "#0B0B0B"
+                    }
+                  },
+                  {
+                    "value": "Targets came as 17 rows using 10 spellings of 4 regions; Central 2018 has no target and is left blank",
+                    "textStyle": {
+                      "fontSize": "10pt",
+                      "color": "#52514E"
+                    }
+                  }
+                ]
+              }
+            ]
+          }
+        }
+      ]
+    }
+  }
+}

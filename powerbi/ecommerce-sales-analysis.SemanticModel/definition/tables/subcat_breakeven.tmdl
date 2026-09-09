@@ -1,0 +1,28 @@
+table subcat_breakeven
+
+	column sub_category
+		dataType: string
+		summarizeBy: none
+		sourceColumn: sub_category
+
+		annotation SummarizationSetBy = Automatic
+
+	column breakeven_cap
+		dataType: decimal
+		formatString: 0%;-0%;0%
+		summarizeBy: none
+		sourceColumn: breakeven_cap
+
+		annotation SummarizationSetBy = Automatic
+
+	partition subcat_breakeven = m
+		mode: import
+		source =
+				let
+				    Source = PostgreSQL.Database("127.0.0.1", "ecommerce"),
+				    Data = Source{[Schema="core",Item="v_subcat_breakeven"]}[Data],
+				    Typed = Table.TransformColumnTypes(Data, {{"sub_category", type text},{"breakeven_cap", Currency.Type}})
+				in
+				    Typed
+
+	annotation PBI_ResultType = Table
