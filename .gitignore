@@ -21,3 +21,6 @@ venv/
 Thumbs.db
 *.log
 scratch/
+
+# Private interview-prep material - stays local, never committed
+HANDBOOK.md
